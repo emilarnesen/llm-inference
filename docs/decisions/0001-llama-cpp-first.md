@@ -29,6 +29,11 @@ Candidates were Ollama, llama.cpp, MLX (`mlx-lm`) and vLLM (`vllm-metal`). The c
 
 ## Consequences
 
+- The everyday service is cheap: the router uses ~75 MB when idle and holds no model. Models load
+  on demand and unload after 15 idle minutes, so the Mac stays usable for other work. See
+  [../serving.md](../serving.md).
+- vllm-metal is started by hand for experiments, never left running, because it reserves GPU
+  memory while it runs.
 - Models are GGUF files in a folder we control. That folder belongs on the external SSD when it is
   connected.
 - We write and version our own launchd plist and router preset (per-model settings) in this repo.

@@ -102,9 +102,15 @@ calls, several requests in parallel and several models. llama.cpp is the most ma
 four. MLX is fastest on short prompts, but its weak spots (one model loaded, fragile tool calls,
 slow long context) are exactly what agents hit.
 
+Router mode also suits a **shared Mac**. The idle router uses about 75 MB and holds no model.
+Models load from disk on the first request and unload after 15 idle minutes. How this works, with
+measurements, is in [serving.md](serving.md).
+
 **Second experiment: vllm-metal.** Run the same model on both engines and measure concurrency (many
 parallel agents) and prefix-cache effects. This is how we learn vLLM's concepts locally, on the
-same CLI as production, before Track B on real GPUs.
+same CLI as production, before Track B on real GPUs. vLLM reserves GPU memory up front and serves
+one model per process, so it runs **on demand during experiments**, not as the everyday service.
+See [serving.md](serving.md#where-vllm-metal-fits).
 
 **Not chosen:** Ollama. It hides the knobs we want to learn. Plain `mlx-lm` is not chosen as the
 server either, but it stays a candidate for a speed comparison.

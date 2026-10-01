@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  launchd user agent for llama-server in router mode.
+  Rendered and installed by scripts/install-service.sh (__HOME__ and __REPO__ are replaced).
+-->
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>local.llm-inference.llama-server</string>
+
+  <key>ProgramArguments</key>
+  <array>
+    <string>/opt/homebrew/bin/llama-server</string>
+    <!-- Only reachable from this Mac. -->
+    <string>--host</string>          <string>127.0.0.1</string>
+    <string>--port</string>          <string>8080</string>
+    <!-- Router mode: no model given; models come from the preset (and the HF cache). -->
+    <string>--models-preset</string> <string>__REPO__/router/models.ini</string>
+    <!-- At most 2 models in memory at once (25.5 GB GPU budget); least recently used is unloaded. -->
+    <string>--models-max</string>    <string>2</string>
+    <!-- Unload models after 15 idle minutes to free memory. -->
+    <string>--sleep-idle-seconds</string> <string>900</string>
+    <!-- Every request needs "Authorization: Bearer <key>". Keys are outside the repo. -->
+    <string>--api-key-file</string>  <string>__HOME__/.config/llm-inference/api-keys</string>
+    <!-- Browsers may only call it from localhost pages. -->
+    <string>--cors-origins</string>  <string>localhost</string>
+    <!-- Prometheus metrics at /metrics. -->
+    <string>--metrics</string>
+  </array>
+
+  <key>WorkingDirectory</key>
+  <string>__REPO__</string>
+
+  <!-- Start at login and restart if it crashes. -->
+  <key>RunAtLoad</key>
+  <true/>
+  <key>KeepAlive</key>
+  <true/>
+  <key>ThrottleInterval</key>
+  <integer>10</integer>
+
+  <!-- Don't let macOS treat it as low-priority background work. -->
+  <key>ProcessType</key>
+  <string>Interactive</string>
+
+  <key>StandardOutPath</key>
+  <string>__HOME__/Library/Logs/llm-inference/llama-server.log</string>
+  <key>StandardErrorPath</key>
+  <string>__HOME__/Library/Logs/llm-inference/llama-server.log</string>
+</dict>
+</plist>

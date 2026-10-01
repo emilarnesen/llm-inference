@@ -1,0 +1,60 @@
+#!/bin/sh
+# llm — small helper around the llama-server router service.
+#
+#   llm status            service state + every model (loaded/unloaded) + memory use
+#   llm load <model>      load a model now (otherwise it loads on first request)
+#   llm unload <model>    unload a model and free its memory
+#   llm unload-all        unload every loaded model
+#   llm stop              stop the service and keep it off, also across logins
+#   llm start             enable and start the service again
+#   llm restart           restart (e.g. after editing router/models.ini)
+#   llm logs              follow the log
+set -eu
+
+LABEL="local.llm-inference.llama-server"
+DOMAIN="gui/$(id -u)"
+URL="${LLM_URL:-http://127.0.0.1:8080}"
+KEYS="$HOME/.config/llm-inference/api-keys"
+PLIST="$HOME/Library/LaunchAgents/$LABEL.plist"
+LOG="$HOME/Library/Logs/llm-inference/llama-server.log"
+
+api() { # api METHOD PATH [JSON]
+  curl -fsS -X "$1" -H "Authorization: Bearer $(head -1 "$KEYS")" \
+    -H 'Content-Type: application/json' ${3:+-d "$3"} "$URL$2"
+}
+
+running() { launchctl print "$DOMAIN/$LABEL" >/dev/null 2>&1; }
+
+case "${1:-status}" in
+  status)
+    if ! running; then echo "service: stopped"; exit 0; fi
+    echo "service: running ($URL)"
+    api GET /v1/models | python3 -c '
+import sys, json
+for m in json.load(sys.stdin)["data"]:
+    print("  %-40s %s" % (m["id"], m["status"]["value"]))'
+    echo "memory:"
+    ps -axo rss=,command= | awk '/[l]lama-server/ { name = "router";
+      for (i=1;i<=NF;i++) if ($i=="--alias") name=$(i+1);
+      printf "  %-40s %6.0f MB\n", name, $1/1024 }'
+    ;;
+  load)       api POST /models/load   "{\"model\":\"${2:?model name}\"}"; echo ;;
+  unload)     api POST /models/unload "{\"model\":\"${2:?model name}\"}"; echo ;;
+  unload-all)
+    api GET /v1/models | python3 -c '
+import sys, json
+print("\n".join(m["id"] for m in json.load(sys.stdin)["data"] if m["status"]["value"] == "loaded"))' |
+    while read -r m; do [ -n "$m" ] && api POST /models/unload "{\"model\":\"$m\"}" && echo " $m"; done
+    ;;
+  stop)
+    launchctl disable "$DOMAIN/$LABEL"
+    launchctl bootout "$DOMAIN/$LABEL" 2>/dev/null || true
+    echo "stopped (stays off until 'llm start')" ;;
+  start)
+    launchctl enable "$DOMAIN/$LABEL"
+    running || launchctl bootstrap "$DOMAIN" "$PLIST"
+    echo "started" ;;
+  restart)    launchctl kickstart -k "$DOMAIN/$LABEL"; echo "restarted" ;;
+  logs)       tail -f "$LOG" ;;
+  *)          sed -n '2,12p' "$0"; exit 1 ;;
+esac
