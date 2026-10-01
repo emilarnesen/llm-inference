@@ -56,6 +56,8 @@ After editing the preset, restart the service (step 5).
 The script:
 
 1. Creates an API key in `~/.config/llm-inference/api-keys` (once; mode 600, never committed).
+1. Downloads the web UI files for the installed llama.cpp build to
+   `~/.local/share/llm-inference/ui/b<build>/` (see the gotcha below).
 2. Renders [`launchd/llama-server.plist.template`](../launchd/llama-server.plist.template) into
    `~/Library/LaunchAgents/local.llm-inference.llama-server.plist`.
 3. Loads it with `launchctl`. The service starts now and at every login, and restarts if it
@@ -72,6 +74,7 @@ What the service runs:
 | `--api-key-file …` | Every request needs `Authorization: Bearer <key>`. |
 | `--cors-origins localhost` | Web pages on other sites can't call the server from your browser. |
 | `--metrics` | Prometheus metrics at `/metrics`. |
+| `--path …/ui/b<build>` | Serves the web UI files, which the Homebrew bottle lacks. |
 
 ## 5. Check, use, restart
 
@@ -114,6 +117,15 @@ tail -f ~/Library/Logs/llm-inference/llama-server.log                    # logs
 The web UI is at http://127.0.0.1:8080. It asks for the API key.
 
 ## Notes and gotchas
+
+- **The web UI is missing from Homebrew's llama.cpp 0.5.0.** `http://127.0.0.1:8080` returns
+  `{"error":{"message":"File Not Found",…}}` (open issue
+  [homebrew-core#314191](https://github.com/Homebrew/homebrew-core/issues/314191), fix
+  [PR #314732](https://github.com/Homebrew/homebrew-core/pull/314732) not merged as of
+  2026-10-02). The workaround is the official `llama-b<build>-ui.tar.gz` from the matching
+  [llama.cpp release](https://github.com/ggml-org/llama.cpp/releases), served with `--path`.
+  `install-service.sh` does this. **Re-run it after `brew upgrade llama.cpp`**, so the UI matches
+  the new build.
 
 - **LaunchAgent, not LaunchDaemon:** the service starts at *login*, not at boot. On an always-on
   Mac, that means auto-login, or later a LaunchDaemon. This ties into the external SSD's

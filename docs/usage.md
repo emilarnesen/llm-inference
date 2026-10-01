@@ -81,8 +81,8 @@ curl -s -H "Authorization: Bearer $KEY" -H 'Content-Type: application/json' \
 
 | Want | Use |
 |---|---|
-| A chat in the browser | http://127.0.0.1:8080 (the built-in web UI; asks for the key) |
-| A chat in the terminal against the running server | `llama-cli --server-base http://127.0.0.1:8080` (key handling unverified) |
+| A chat in the browser | http://127.0.0.1:8080, the web UI. Enter the key in its settings; copy it with `head -1 ~/.config/llm-inference/api-keys \| pbcopy` |
+| A chat in the terminal against the running server | Not possible with our setup: `llama-cli --server-base` cannot send an API key and gets `401` (tested 2026-10-02) |
 | OpenAI-style clients and SDKs | Base URL `http://127.0.0.1:8080/v1`, API key = the key, model = a preset name |
 | Anthropic-style clients | `POST /v1/messages` on the same server |
 | Metrics | `curl -s -H "Authorization: Bearer $KEY" "http://127.0.0.1:8080/metrics?model=gemma-4-e2b"` |
@@ -100,3 +100,4 @@ it, just like the OpenRouter key.
 | API key | `~/.config/llm-inference/api-keys` (mode 600, not in git) |
 | Service definition | `~/Library/LaunchAgents/local.llm-inference.llama-server.plist` (generated from `launchd/`) |
 | Logs | `~/Library/Logs/llm-inference/llama-server.log` |
+| Web UI files | `~/.local/share/llm-inference/ui/b<build>/` (downloaded by `install-service.sh`) |

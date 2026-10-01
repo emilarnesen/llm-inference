@@ -2,7 +2,7 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <!--
   launchd user agent for llama-server in router mode.
-  Rendered and installed by scripts/install-service.sh (__HOME__ and __REPO__ are replaced).
+  Rendered and installed by scripts/install-service.sh (__HOME__, __REPO__ and __UI__ are replaced).
 -->
 <plist version="1.0">
 <dict>
@@ -27,6 +27,9 @@
     <string>--cors-origins</string>  <string>localhost</string>
     <!-- Prometheus metrics at /metrics. -->
     <string>--metrics</string>
+    <!-- Web UI files. The Homebrew 0.5.0 bottle ships without them (homebrew-core#314191),
+         so install-service.sh downloads the official UI bundle for the installed build. -->
+    <string>--path</string>          <string>__UI__</string>
   </array>
 
   <key>WorkingDirectory</key>

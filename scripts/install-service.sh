@@ -17,16 +17,35 @@ if [ ! -f "$KEYS" ]; then
 fi
 chmod 600 "$KEYS"
 
-# 2. Log folder.
+# 2. Web UI files for the installed llama.cpp build (missing from the Homebrew bottle,
+#    see homebrew-core#314191). Re-run this script after `brew upgrade llama.cpp`.
+BUILD="$(llama-server --version 2>&1 | sed -n 's/.*(build \([0-9]*\).*/\1/p')"
+UI="$HOME/.local/share/llm-inference/ui/b$BUILD"
+if [ ! -f "$UI/index.html" ]; then
+  TMP="$(mktemp -d)"
+  curl -fsSL "https://github.com/ggml-org/llama.cpp/releases/download/b$BUILD/llama-b$BUILD-ui.tar.gz" | tar -xz -C "$TMP"
+  mkdir -p "$(dirname "$UI")"
+  mv "$(dirname "$(find "$TMP" -name index.html | head -1)")" "$UI"
+  rm -rf "$TMP"
+  echo "Downloaded web UI for build b$BUILD to $UI"
+fi
+
+# 3. Log folder.
 mkdir -p "$HOME/Library/Logs/llm-inference"
 
-# 3. Render the plist with this machine's paths.
-sed -e "s#__HOME__#$HOME#g" -e "s#__REPO__#$REPO#g" \
+# 4. Render the plist with this machine's paths.
+sed -e "s#__HOME__#$HOME#g" -e "s#__REPO__#$REPO#g" -e "s#__UI__#$UI#g" \
   "$REPO/launchd/llama-server.plist.template" > "$PLIST"
 plutil -lint "$PLIST"
 
-# 4. (Re)load the service.
+# 5. (Re)load the service.
 launchctl bootout "gui/$(id -u)/$LABEL" 2>/dev/null || true
+# bootout returns before the old job is gone; bootstrapping too early fails with
+# "Bootstrap failed: 5: Input/output error". Wait up to 10 s for it to disappear.
+i=0
+while launchctl print "gui/$(id -u)/$LABEL" >/dev/null 2>&1 && [ $i -lt 20 ]; do
+  sleep 0.5; i=$((i + 1))
+done
 launchctl bootstrap "gui/$(id -u)" "$PLIST"
 
 echo "Installed $LABEL. Check with:"
